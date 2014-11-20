@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Socket.IO chat</title>
+    <style>
+    </style>
+    <script>
+    //microajax
+    function microAjax(B,A){this.bindFunction=function(E,D){return function(){return E.apply(D,[D])}};this.stateChange=function(D){if(this.request.readyState==4){this.callbackFunction(this.request.responseText)}};this.getRequest=function(){if(window.ActiveXObject){return new ActiveXObject("Microsoft.XMLHTTP")}else{if(window.XMLHttpRequest){return new XMLHttpRequest()}}return false};this.postBody=(arguments[2]||"");this.callbackFunction=A;this.url=B;this.request=this.getRequest();if(this.request){var C=this.request;C.onreadystatechange=this.bindFunction(this.stateChange,this);if(this.postBody!==""){C.open("POST",B,true);C.setRequestHeader("X-Requested-With","XMLHttpRequest");C.setRequestHeader("Content-type","application/x-www-form-urlencoded");C.setRequestHeader("Connection","close")}else{C.open("GET",B,true)}C.send(this.postBody)}};
+    </script>
+  </head>
+  <body>
+    <input id="urlinput" style="width:200px" value="/notify?appname=hoge&amp;title=abc&amp;message=deg"></br>
+    <button id="notifybutton">notify</button>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+    notifybutton.addEventListener('click', function(p) {
+      microAjax(urlinput.value, function(e) {
+        console.log(e);
+      });
+    });
+
+      window.addEventListener('load', function () {
+        // 通知の許可を得ているかを確認
+        if (Notification && Notification.permission !== "granted") {
+          Notification.requestPermission(function (status) {
+            if (Notification.permission !== status) {
+              Notification.permission = status;
+            }
+          });
+        }
+      });
+
+      var socket = io();
+      var shouldNotification = function(callback) {
+        // 通知されることにユーザが同意している場合
+        if (Notification && Notification.permission === "granted") {
+          callback(true);
+        }
+
+        // 通知を受けたいか否かをユーザが告げていない場合
+        // 注記: Chrome のために permission プロパティが設定されているかの確信が
+        // 持てないため、値 "default" を確認するのは安全ではありません。
+        else if (Notification && Notification.permission !== "denied") {
+          Notification.requestPermission(function (status) {
+            if (Notification.permission !== status) {
+              Notification.permission = status;
+            }
+
+            // ユーザが認めている場合
+            if (status === "granted") {
+              callback(true);
+            }
+
+            // 認めていなければ、通常型の alert にフォールバックします
+            else {
+              callback(false);
+            }
+          });
+        }
+
+        // ユーザが通知を拒否している場合
+        else {
+          // 通常型の alert にフォールバックできます
+          callback(false);
+        }
+      }
+      socket.emit('join', ['hoge']);
+      socket.on('notify', function(msg){
+        console.log(msg);
+        shouldNotification(function(result) {
+          if(result) {
+            var n = new Notification(msg.title, {body: msg.message, tag: msg.tag});
+          } else {
+            alert(msg.title + "\n" + msg.message);
+          }
+        });
+      });
+
+
+
+
+    </script>
+  </body>
+</html>
